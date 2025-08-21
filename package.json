@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "axios": "^1.11.0",
+    "bootstrap": "^5.3.7",
+    "dayjs": "^1.11.13",
+    "g": "^2.0.1",
+    "typescript": "^5.9.2"
+  }
+}
