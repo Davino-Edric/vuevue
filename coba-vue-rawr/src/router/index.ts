@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Tabler from '@/views/Tabler.vue'
-import TableComponents from '@/views/TableComponents.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -9,11 +8,6 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: Tabler,
-    },
-    {
-      path: '/vibecoded',
-      name: 'ahh',
-      component: TableComponents,
     },
   ],
 })

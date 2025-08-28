@@ -33,6 +33,11 @@
             </tr>
           </thead>
         </table>
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <button class="btn btn-secondary" :disabled="currentPage === 1" @click="prevPage">Previous</button>
+          <p>Page {{ currentPage }} of {{ totalPages }}</p>
+          <button class="btn btn-secondary" :disabled="currentPage === totalPages" @click="nextPage">Next</button>
+        </div>
         
         <!-- Add Modal -->
         <div class="modal fade" id="addmodal" tabindex="-1" aria-labelledby="addmodaltable">
@@ -54,6 +59,9 @@
                       <img id="preview" src="" alt="Preview" class="img-thumbnail d-none" style="max-width: 300px;">
                     </div>
                 </form>
+              </div>
+              <div v-if="AddErrorMessage" class="alert alert-danger mt-3">
+                {{ AddErrorMessage }}
               </div>
               <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -83,6 +91,9 @@
                     <div class="mt-3">
                       <img id="previewEdit" src="" alt="Preview" class="img-thumbnail d-none" style="max-width: 300px;">
                     </div>
+                    <div v-if="EditErrorMessage" class="alert alert-danger mt-3">
+                      {{ EditErrorMessage }}
+                    </div>
                 </form>
               </div>
               <div class="modal-footer">
@@ -104,10 +115,21 @@ import { onMounted, ref } from "vue";
 
 const data = ref<Item[]>([]);
 
+const currentPage = ref(1);
+const itemsPerPage = 10;
+const totalPages = ref(1);
+
 const get_data = async()=>{
   try {
     const response = await axios.get('http://localhost:8000/api/data')
     data.value = response.data
+    const allData = response.data
+
+    data.value = allData.sort((a: Item, b:Item) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    totalPages.value = Math.ceil(data.value.length / itemsPerPage);
+
+    paginate_data();
+
     console.log(data.value)
   } catch (error) {
     if (error instanceof Error) {
@@ -117,6 +139,15 @@ const get_data = async()=>{
     }
   }
 }
+const paginate_data = () => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
+  return data.value.slice(start, end);
+}
+
+// ErrorMessage
+const AddErrorMessage = ref<string | null>(null);
+const EditErrorMessage = ref<string | null>(null);
 
 // Add form data
 const nisn = ref<number | undefined>()
@@ -125,7 +156,12 @@ const photo = ref<HTMLInputElement>()
 
 const post_data = async()=>{
   if (!nisn.value || !name.value || !photo.value?.files?.[0]) {
-    console.error('Please fill all fields');
+    AddErrorMessage.value = ('Please fill all fields');
+    return;
+  }
+
+  if (nisn.value.toString().length !== 10) {
+    AddErrorMessage.value = 'NISN value must exactly be 10 digits';
     return;
   }
 
@@ -139,19 +175,20 @@ const post_data = async()=>{
       headers: {
         'Content-Type': 'multipart/form-data'
       }
-    })
+    });
     
-    // Clear form
+    // Clear form and error messages
     nisn.value = undefined
     name.value = ''
     if (photo.value) photo.value.value = ''
-    
+    AddErrorMessage.value = null
+
     get_data()
   } catch (error) {
-    if (error instanceof Error) {
-      console.log(error.message);
+    if (axios.isAxiosError(error) && error.response) {
+      AddErrorMessage.value = error.response.data.message || 'An unknown error occurred.';
     } else {
-      console.log('An unknown error occurred.');
+      AddErrorMessage.value = ('An unknown error occurred.');
     }
   }
 }
@@ -185,6 +222,7 @@ const saveid = async(id: number)=>{
   // Load existing data for editing
   try {
     const response = await axios.get(`http://localhost:8000/api/data/${id}`)
+    
     const studentData = response.data
     nisnEdit.value = studentData.nisn
     nameEdit.value = studentData.name
@@ -195,7 +233,11 @@ const saveid = async(id: number)=>{
 
 const update_data = async()=>{
   if (!id_edit.value || !nisnEdit.value || !nameEdit.value) {
-    console.error('Please fill all required fields');
+    EditErrorMessage.value = ('Please fill all required fields');
+    return;
+  }
+  if (nisnEdit.value.toString().length !== 10) {
+    EditErrorMessage.value = 'NISN value must exactly be 10 digits';
     return;
   }
 
@@ -223,16 +265,31 @@ const update_data = async()=>{
     nameEdit.value = ''
     if (photoEdit.value) photoEdit.value.value = ''
     id_edit.value = null
+    EditErrorMessage.value = null
     
     get_data()
   } catch (error) {
     if (error instanceof Error) {
-      console.log(error.message);
+      EditErrorMessage.value = error.message;
     } else {
-      console.log('An unknown error occurred.');
+      EditErrorMessage.value = ('An unknown error occurred.');
     }
   }
 }
+
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--;
+    paginate_data();
+  }
+};
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++;
+    paginate_data();
+  }
+};
 
 onMounted(()=>{
   get_data()
