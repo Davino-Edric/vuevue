@@ -27,8 +27,8 @@
               <td><img class="align-items-center" style="max-width: 100px; max-height: 250px;" :src="'http://localhost:8000/storage/'+item.photopath"></img></td>
               <td class="align-items-center">{{ item.created_at }}</td>
               <td>
-                <button class="btn btn-danger pe-3 ps-3" @click.prevent='delete_data(item.id)'>Hapus</button>
-                <button class="btn btn-warning ms-2 pe-3 ps-3" data-bs-toggle="modal" data-bs-target="#editmodal" @click="saveid(item.id)">Edit</button>
+                <button class="btn btn-danger pe-3 ps-3" @click.prevent='delete_data(item.nisn)'>Hapus</button>
+                <button class="btn btn-warning ms-2 pe-3 ps-3" data-bs-toggle="modal" data-bs-target="#editmodal" @click="saveid(item.nisn)">Edit</button>
               </td>
             </tr>
           </thead>
@@ -119,18 +119,18 @@ const currentPage = ref(1);
 const itemsPerPage = 10;
 const totalPages = ref(1);
 
-const get_data = async()=>{
+const get_data = async () => {
   try {
-    const response = await axios.get('http://localhost:8000/api/data')
-    data.value = response.data
-    const allData = response.data
+    const response = await axios.get('http://localhost:8000/api/data');
+    data.value = response.data;
+    const allData = response.data;
 
-    data.value = allData.sort((a: Item, b:Item) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    data.value = allData.sort((a: Item, b: Item) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     totalPages.value = Math.ceil(data.value.length / itemsPerPage);
 
     paginate_data();
 
-    console.log(data.value)
+    console.log(data.value);
   } catch (error) {
     if (error instanceof Error) {
       console.log(error.message);
@@ -138,25 +138,26 @@ const get_data = async()=>{
       console.error('An unknown error occurred.');
     }
   }
-}
+};
+
 const paginate_data = () => {
   const start = (currentPage.value - 1) * itemsPerPage;
   const end = start + itemsPerPage;
   return data.value.slice(start, end);
-}
+};
 
 // ErrorMessage
 const AddErrorMessage = ref<string | null>(null);
 const EditErrorMessage = ref<string | null>(null);
 
 // Add form data
-const nisn = ref<number | undefined>()
-const name = ref<string>('')
-const photo = ref<HTMLInputElement>()
+const nisn = ref<number | undefined>();
+const name = ref<string>('');
+const photo = ref<HTMLInputElement>();
 
-const post_data = async()=>{
+const post_data = async () => {
   if (!nisn.value || !name.value || !photo.value?.files?.[0]) {
-    AddErrorMessage.value = ('Please fill all fields');
+    AddErrorMessage.value = 'Please fill all fields';
     return;
   }
 
@@ -166,41 +167,41 @@ const post_data = async()=>{
   }
 
   const form_data = new FormData();
-  form_data.append('nisn', nisn.value.toString())
-  form_data.append('name', name.value)
-  form_data.append('photopath', photo.value.files[0])
-  
-  try {
-    const packets = await axios.post('http://localhost:8000/api/store', form_data, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
-    
-    // Clear form and error messages
-    nisn.value = undefined
-    name.value = ''
-    if (photo.value) photo.value.value = ''
-    AddErrorMessage.value = null
+  form_data.append('nisn', nisn.value.toString());
+  form_data.append('name', name.value);
+  form_data.append('photopath', photo.value.files[0]);
 
-    get_data()
+  try {
+    await axios.post('http://localhost:8000/api/store', form_data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    // Clear form and error messages
+    nisn.value = undefined;
+    name.value = '';
+    if (photo.value) photo.value.value = '';
+    AddErrorMessage.value = null;
+
+    get_data();
   } catch (error) {
     if (axios.isAxiosError(error) && error.response) {
       AddErrorMessage.value = error.response.data.message || 'An unknown error occurred.';
     } else {
-      AddErrorMessage.value = ('An unknown error occurred.');
+      AddErrorMessage.value = 'An unknown error occurred.';
     }
   }
-}
+};
 
-const delete_data = async(id: number)=> {
+const delete_data = async (nisn: number) => {
   if (!confirm('Are you sure you want to delete this data?')) {
     return;
   }
-  
+
   try {
-    const response = await axios.delete(`http://localhost:8000/api/destroy/${id}`)
-    get_data()
+    await axios.delete(`http://localhost:8000/api/destroy/${nisn}`);
+    get_data();
   } catch (error) {
     if (error instanceof Error) {
       console.log(error.message);
@@ -208,32 +209,31 @@ const delete_data = async(id: number)=> {
       console.log('An unknown error occurred.');
     }
   }
-}
+};
 
 // Edit form data
-const nisnEdit = ref<number | undefined>()
-const nameEdit = ref<string>('')
-const photoEdit = ref<HTMLInputElement>()
-const id_edit = ref<number | null>(null)
+const nisnEdit = ref<number | undefined>();
+const nameEdit = ref<string>('');
+const photoEdit = ref<HTMLInputElement>();
 
-const saveid = async(id: number)=>{
-  id_edit.value = id
-  
+const saveid = async (nisn: number) => {
+  nisnEdit.value = nisn;
+
   // Load existing data for editing
   try {
-    const response = await axios.get(`http://localhost:8000/api/data/${id}`)
-    
-    const studentData = response.data
-    nisnEdit.value = studentData.nisn
-    nameEdit.value = studentData.name
-  } catch (error) {
-    console.error('Error loading student data:', error)
-  }
-}
+    const response = await axios.get(`http://localhost:8000/api/data/${nisn}`);
 
-const update_data = async()=>{
-  if (!id_edit.value || !nisnEdit.value || !nameEdit.value) {
-    EditErrorMessage.value = ('Please fill all required fields');
+    const studentData = response.data;
+    nisnEdit.value = studentData.nisn;
+    nameEdit.value = studentData.name;
+  } catch (error) {
+    console.error('Error loading student data:', error);
+  }
+};
+
+const update_data = async () => {
+  if (!nisnEdit.value || !nameEdit.value) {
+    EditErrorMessage.value = 'Please fill all required fields';
     return;
   }
   if (nisnEdit.value.toString().length !== 10) {
@@ -242,40 +242,39 @@ const update_data = async()=>{
   }
 
   const new_data = new FormData();
-  new_data.append('nisn', nisnEdit.value.toString())
-  new_data.append('name', nameEdit.value)
-  
+  new_data.append('nisn', nisnEdit.value.toString());
+  new_data.append('name', nameEdit.value);
+
   // Only append photo if a new one is selected
   if (photoEdit.value?.files?.[0]) {
-    new_data.append('photopath', photoEdit.value.files[0])
+    new_data.append('photopath', photoEdit.value.files[0]);
   }
-  
+
   // Laravel requires _method for PUT with FormData
-  new_data.append('_method', 'PUT')
+  new_data.append('_method', 'PUT');
 
   try {
-    const response = await axios.post(`http://localhost:8000/api/update/${id_edit.value}`, new_data, {
+    await axios.post(`http://localhost:8000/api/update/${nisnEdit.value}`, new_data, {
       headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
-    
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
     // Clear edit form
-    nisnEdit.value = undefined
-    nameEdit.value = ''
-    if (photoEdit.value) photoEdit.value.value = ''
-    id_edit.value = null
-    EditErrorMessage.value = null
-    
-    get_data()
+    nisnEdit.value = undefined;
+    nameEdit.value = '';
+    if (photoEdit.value) photoEdit.value.value = '';
+    EditErrorMessage.value = null;
+
+    get_data();
   } catch (error) {
     if (error instanceof Error) {
       EditErrorMessage.value = error.message;
     } else {
-      EditErrorMessage.value = ('An unknown error occurred.');
+      EditErrorMessage.value = 'An unknown error occurred.';
     }
   }
-}
+};
 
 const prevPage = () => {
   if (currentPage.value > 1) {
@@ -291,7 +290,7 @@ const nextPage = () => {
   }
 };
 
-onMounted(()=>{
-  get_data()
-})
+onMounted(() => {
+  get_data();
+});
 </script>
