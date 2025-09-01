@@ -18,6 +18,7 @@
               <th scope="col">Nama</th>
               <th scope="col">Foto</th>
               <th scope="col">Tanggal pembuatan</th>
+              <th scope="col">Status</th>
               <th scope="col">Action</th>
             </tr>
             <tr v-for="(item, index) in data" :key="index">
@@ -26,9 +27,11 @@
               <td class="align-items-center">{{ item.name }}</td>
               <td><img class="align-items-center" style="max-width: 100px; max-height: 250px;" :src="'http://localhost:8000/storage/'+item.photopath"></img></td>
               <td class="align-items-center">{{ item.created_at }}</td>
+              <td class="align-items-center">{{ item.status ? 'Aktif' : 'Tidak Aktif' }}</td>
               <td>
-                <button class="btn btn-danger pe-3 ps-3" @click.prevent='delete_data(item.nisn)'>Hapus</button>
-                <button class="btn btn-warning ms-2 pe-3 ps-3" data-bs-toggle="modal" data-bs-target="#editmodal" @click="saveid(item.nisn)">Edit</button>
+                <button class="btn btn-warning pe-3 ps-3" data-bs-toggle="modal" data-bs-target="#editmodal" @click="saveid(item.nisn)">Edit</button>
+                <button v-if="item.status" class="ms-3 btn btn-danger pe-3 ps-3" @click.prevent='deactivate_data(item.nisn)'>Nonaktifkan</button>
+                <button v-else class="btn btn-success ms-3 me-0" data-bs-toggle="modal" @click.prevent="restore_data(item.nisn)">Aktifkan</button>
               </td>
             </tr>
           </thead>
@@ -154,6 +157,7 @@ const EditErrorMessage = ref<string | null>(null);
 const nisn = ref<number | undefined>();
 const name = ref<string>('');
 const photo = ref<HTMLInputElement>();
+const status = ref<boolean>(true);
 
 const post_data = async () => {
   if (!nisn.value || !name.value || !photo.value?.files?.[0]) {
@@ -170,6 +174,7 @@ const post_data = async () => {
   form_data.append('nisn', nisn.value.toString());
   form_data.append('name', name.value);
   form_data.append('photopath', photo.value.files[0]);
+  form_data.append('status', status.value ? '1' : '0');
 
   try {
     await axios.post('http://localhost:8000/api/store', form_data, {
@@ -194,13 +199,16 @@ const post_data = async () => {
   }
 };
 
-const delete_data = async (nisn: number) => {
-  if (!confirm('Are you sure you want to delete this data?')) {
+const deactivate_data = async (nisn: number) => {
+  if (!confirm('Are you sure you want to deactivate this data?')) {
     return;
   }
 
   try {
-    await axios.delete(`http://localhost:8000/api/destroy/${nisn}`);
+    await axios.post(`http://localhost:8000/api/deactivate/${nisn}`, {
+      _method: 'PUT'
+    });
+    
     get_data();
   } catch (error) {
     if (error instanceof Error) {
@@ -210,6 +218,26 @@ const delete_data = async (nisn: number) => {
     }
   }
 };
+
+const restore_data = async (nisn:number) => {
+  if (!confirm('Restore this row of data?')) {
+    return;
+  }
+
+  try {
+    await axios.post(`http://localhost:8000/api/restore/${nisn}`, {
+      _method: 'PUT'
+    });
+    
+    get_data();
+  } catch (error) {
+    if (error instanceof Error) {
+      console.log(error.message);
+    } else {
+      console.log('An unknown error occurred.');
+    }
+  }
+}
 
 // Edit form data
 const nisnEdit = ref<number | undefined>();

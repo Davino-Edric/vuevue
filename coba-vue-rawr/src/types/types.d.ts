@@ -3,4 +3,5 @@ export interface Item {
   name: string;
   photopath: string;
   created_at: string;
+  status: boolean;
 }
